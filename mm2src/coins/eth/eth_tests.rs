@@ -2,6 +2,7 @@ use super::*;
 use crate::IguanaPrivKey;
 use common::block_on;
 use futures_util::future;
+use std::collections::VecDeque;
 use mm2_core::mm_ctx::MmCtxBuilder;
 
 cfg_native!(
@@ -214,7 +215,7 @@ fn test_withdraw_impl_manual_fee() {
         let balance = wei_from_big_decimal(&1000000000.into(), 18).unwrap();
         MockResult::Return(Box::new(futures01::future::ok(balance)))
     });
-    EthCoin::get_addr_nonce.mock_safe(|_, _| MockResult::Return(Box::new(futures01::future::ok((0.into(), vec![])))));
+    EthCoin::get_addr_nonce.mock_safe(|_, _| MockResult::Return(Box::new(futures01::future::ok((0.into(), VecDeque::<Web3Instance>::default())))));
 
     let withdraw_req = WithdrawRequest {
         amount: 1.into(),
@@ -260,7 +261,7 @@ fn test_withdraw_impl_fee_details() {
         let balance = wei_from_big_decimal(&1000000000.into(), 18).unwrap();
         MockResult::Return(Box::new(futures01::future::ok(balance)))
     });
-    EthCoin::get_addr_nonce.mock_safe(|_, _| MockResult::Return(Box::new(futures01::future::ok((0.into(), vec![])))));
+    EthCoin::get_addr_nonce.mock_safe(|_, _| MockResult::Return(Box::new(futures01::future::ok((0.into(), VecDeque::<Web3Instance>::default())))));
 
     let withdraw_req = WithdrawRequest {
         amount: 1.into(),

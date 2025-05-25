@@ -17,6 +17,7 @@ use mm2_metamask::{from_metamask_error, MetamaskError, MetamaskRpcError, WithMet
 use mm2_p2p::p2p_ctx::P2PContext;
 use proxy_signature::RawMessage;
 use rpc_task::RpcTaskError;
+use std::collections::VecDeque;
 use std::sync::atomic::Ordering;
 use url::Url;
 use web3_transport::websocket_transport::WebsocketTransport;
@@ -819,7 +820,7 @@ async fn build_web3_instances(
     ctx: &MmArc,
     coin_ticker: String,
     mut eth_nodes: Vec<EthNode>,
-) -> MmResult<Vec<Web3Instance>, EthActivationV2Error> {
+) -> MmResult<VecDeque<Web3Instance>, EthActivationV2Error> {
     if eth_nodes.is_empty() {
         return MmError::err(EthActivationV2Error::AtLeastOneNodeRequired);
     }
@@ -830,7 +831,7 @@ async fn build_web3_instances(
 
     let event_handlers = rpc_event_handlers_for_eth_transport(ctx, coin_ticker.clone());
 
-    let mut web3_instances = Vec::with_capacity(eth_nodes.len());
+    let mut web3_instances = VecDeque::with_capacity(eth_nodes.len());
     for eth_node in eth_nodes {
         let uri: Uri = eth_node
             .url
@@ -847,7 +848,7 @@ async fn build_web3_instances(
             },
         };
 
-        web3_instances.push(Web3Instance {
+        web3_instances.push_back(Web3Instance {
             web3,
             is_parity: version.contains("Parity") || version.contains("parity"),
         });
@@ -931,7 +932,7 @@ async fn build_metamask_transport(
     ctx: &MmArc,
     coin_ticker: String,
     chain_id: u64,
-) -> MmResult<Vec<Web3Instance>, EthActivationV2Error> {
+) -> MmResult<VecDeque<Web3Instance>, EthActivationV2Error> {
     let event_handlers = rpc_event_handlers_for_eth_transport(ctx, coin_ticker.clone());
 
     let eth_config = web3_transport::metamask_transport::MetamaskEthConfig { chain_id };
@@ -946,7 +947,7 @@ async fn build_metamask_transport(
 
     // MetaMask doesn't use Parity nodes. So `MetamaskTransport` doesn't support `parity_nextNonce` RPC.
     // An example of the `web3_clientVersion` RPC - `MetaMask/v10.22.1`.
-    let web3_instances = vec![Web3Instance { web3, is_parity: false }];
+    let web3_instances = vec![Web3Instance { web3, is_parity: false }].into();
 
     Ok(web3_instances)
 }

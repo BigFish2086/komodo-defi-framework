@@ -92,6 +92,7 @@ use std::convert::{TryFrom, TryInto};
 use std::ops::Deref;
 use std::str::from_utf8;
 use std::str::FromStr;
+use std::collections::VecDeque;
 use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -855,7 +856,7 @@ pub struct EthCoinImpl {
     swap_v2_contracts: Option<SwapV2Contracts>,
     fallback_swap_contract: Option<Address>,
     contract_supports_watchers: bool,
-    web3_instances: AsyncMutex<Vec<Web3Instance>>,
+    web3_instances: AsyncMutex<VecDeque<Web3Instance>>,
     decimals: u8,
     history_sync_state: Mutex<HistorySyncState>,
     required_confirmations: AtomicU64,
@@ -2673,7 +2674,7 @@ async fn sign_transaction_with_keypair<'a>(
     gas: U256,
     pay_for_gas_option: &PayForGasOption,
     from_address: Address,
-) -> Result<(SignedEthTx, Vec<Web3Instance>), TransactionErr> {
+) -> Result<(SignedEthTx, VecDeque<Web3Instance>), TransactionErr> {
     info!(target: "sign", "get_addr_nonce…");
     let (nonce, web3_instances_with_latest_nonce) = try_tx_s!(coin.clone().get_addr_nonce(from_address).compat().await);
     let tx_type = tx_type_from_pay_for_gas_option!(pay_for_gas_option);
@@ -5534,12 +5535,12 @@ impl EthCoin {
     pub fn get_addr_nonce(
         self,
         addr: Address,
-    ) -> Box<dyn Future<Item = (U256, Vec<Web3Instance>), Error = String> + Send> {
+    ) -> Box<dyn Future<Item = (U256, VecDeque<Web3Instance>), Error = String> + Send> {
         const TMP_SOCKET_DURATION: Duration = Duration::from_secs(300);
 
         let fut = async move {
             let mut errors: u32 = 0;
-            let web3_instances = self.web3_instances.lock().await.to_vec();
+            let web3_instances = self.web3_instances.lock().await;
             loop {
                 let (futures, web3_instances): (Vec<_>, Vec<_>) = web3_instances
                     .iter()
@@ -6418,7 +6419,7 @@ pub async fn eth_coin_from_conf_and_request(
     let (key_pair, derivation_method) =
         try_s!(build_address_and_priv_key_policy(ctx, ticker, conf, priv_key_policy, &path_to_address, None).await);
 
-    let mut web3_instances = vec![];
+    let mut web3_instances = VecDeque::default();
     let event_handlers = rpc_event_handlers_for_eth_transport(ctx, ticker.to_string());
     for url in urls.iter() {
         let uri: Uri = try_s!(url.parse());
@@ -6467,7 +6468,7 @@ pub async fn eth_coin_from_conf_and_request(
             },
         };
 
-        web3_instances.push(Web3Instance {
+        web3_instances.push_back(Web3Instance {
             web3,
             is_parity: version.contains("Parity") || version.contains("parity"),
         })
@@ -6488,7 +6489,7 @@ pub async fn eth_coin_from_conf_and_request(
                 None | Some(0) => try_s!(
                     get_token_decimals(
                         &web3_instances
-                            .first()
+                            .front()
                             .expect("web3_instances can't be empty in ETH activation")
                             .web3,
                         token_addr

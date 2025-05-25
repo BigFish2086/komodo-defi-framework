@@ -3,6 +3,8 @@ use mm2_core::mm_ctx::{MmArc, MmCtxBuilder};
 #[cfg(not(target_arch = "wasm32"))]
 use mm2_test_helpers::for_tests::{eth_sepolia_conf, ETH_SEPOLIA_SWAP_CONTRACT};
 
+use std::collections::VecDeque;
+
 lazy_static! {
     static ref MM_CTX: MmArc = MmCtxBuilder::new().into_mm_arc();
 }
@@ -29,7 +31,7 @@ pub(crate) fn eth_coin_from_keypair(
     key_pair: KeyPair,
     chain_id: u64,
 ) -> (MmArc, EthCoin) {
-    let mut web3_instances = vec![];
+    let mut web3_instances = VecDeque::default();
     for url in urls.iter() {
         let node = HttpTransportNode {
             uri: url.parse().unwrap(),
@@ -37,7 +39,7 @@ pub(crate) fn eth_coin_from_keypair(
         };
         let transport = Web3Transport::new_http(node);
         let web3 = Web3::new(transport);
-        web3_instances.push(Web3Instance { web3, is_parity: false });
+        web3_instances.push_back(Web3Instance { web3, is_parity: false });
     }
     drop_mutability!(web3_instances);
 

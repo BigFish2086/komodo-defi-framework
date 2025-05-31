@@ -7,6 +7,9 @@ use common::HttpStatusCode;
 use http::StatusCode;
 use mm2_core::mm_ctx::MmArc;
 use mm2_err_handle::{map_to_mm::MapToMmResult, mm_error::MmResult};
+use std::fmt;
+
+const FEE_STREAMING_SUPPORTED_COINS: &[&str] = &["EthCoin"];
 
 #[derive(Deserialize)]
 pub struct EnableFeeStreamingRequest {
@@ -14,13 +17,26 @@ pub struct EnableFeeStreamingRequest {
     pub config: EthFeeStreamingConfig,
 }
 
-#[derive(Display, Serialize, SerializeErrorType)]
+#[derive(Serialize, SerializeErrorType)]
 #[serde(tag = "error_type", content = "error_data")]
 pub enum FeeStreamingRequestError {
     EnableError(String),
     CoinNotFound,
-    CoinNotSupported,
+    CoinNotSupported { supported_coins: &'static [&'static str] },
     Internal(String),
+}
+
+impl fmt::Display for FeeStreamingRequestError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            FeeStreamingRequestError::EnableError(msg) => write!(f, "EnableError: {}", msg),
+            FeeStreamingRequestError::CoinNotFound => write!(f, "CoinNotFound"),
+            FeeStreamingRequestError::CoinNotSupported { supported_coins } => {
+                write!(f, "CoinNotSupported: {:?}", supported_coins)
+            },
+            FeeStreamingRequestError::Internal(msg) => write!(f, "Internal: {}", msg),
+        }
+    }
 }
 
 impl HttpStatusCode for FeeStreamingRequestError {
@@ -28,7 +44,7 @@ impl HttpStatusCode for FeeStreamingRequestError {
         match self {
             FeeStreamingRequestError::EnableError(_) => StatusCode::BAD_REQUEST,
             FeeStreamingRequestError::CoinNotFound => StatusCode::NOT_FOUND,
-            FeeStreamingRequestError::CoinNotSupported => StatusCode::NOT_IMPLEMENTED,
+            FeeStreamingRequestError::CoinNotSupported { .. } => StatusCode::NOT_IMPLEMENTED,
             FeeStreamingRequestError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -53,6 +69,8 @@ pub async fn enable_fee_estimation(
                 .map(EnableStreamingResponse::new)
                 .map_to_mm(|e| FeeStreamingRequestError::EnableError(format!("{e:?}")))
         },
-        _ => Err(FeeStreamingRequestError::CoinNotSupported)?,
+        _ => Err(FeeStreamingRequestError::CoinNotSupported {
+            supported_coins: FEE_STREAMING_SUPPORTED_COINS,
+        })?,
     }
 }

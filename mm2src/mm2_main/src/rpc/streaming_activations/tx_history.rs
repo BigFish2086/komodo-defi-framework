@@ -8,19 +8,36 @@ use common::HttpStatusCode;
 use http::StatusCode;
 use mm2_core::mm_ctx::MmArc;
 use mm2_err_handle::{map_to_mm::MapToMmResult, mm_error::MmResult};
+use std::fmt;
+
+const TX_HISTORY_STREAMING_SUPPORTED_COINS: &[&str] =
+    &["UtxoCoin", "Bch", "QtumCoin", "EthCoin", "ZCoin", "Tendermint"];
 
 #[derive(Deserialize)]
 pub struct EnableTxHistoryStreamingRequest {
     pub coin: String,
 }
 
-#[derive(Display, Serialize, SerializeErrorType)]
+#[derive(Serialize, SerializeErrorType)]
 #[serde(tag = "error_type", content = "error_data")]
 pub enum TxHistoryStreamingRequestError {
     EnableError(String),
     CoinNotFound,
-    CoinNotSupported,
+    CoinNotSupported { supported_coins: &'static [&'static str] },
     Internal(String),
+}
+
+impl fmt::Display for TxHistoryStreamingRequestError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TxHistoryStreamingRequestError::EnableError(msg) => write!(f, "EnableError: {}", msg),
+            TxHistoryStreamingRequestError::CoinNotFound => write!(f, "CoinNotFound"),
+            TxHistoryStreamingRequestError::CoinNotSupported { supported_coins } => {
+                write!(f, "CoinNotSupported: {:?}", supported_coins)
+            },
+            TxHistoryStreamingRequestError::Internal(msg) => write!(f, "Internal: {}", msg),
+        }
+    }
 }
 
 impl HttpStatusCode for TxHistoryStreamingRequestError {
@@ -28,7 +45,7 @@ impl HttpStatusCode for TxHistoryStreamingRequestError {
         match self {
             TxHistoryStreamingRequestError::EnableError(_) => StatusCode::BAD_REQUEST,
             TxHistoryStreamingRequestError::CoinNotFound => StatusCode::NOT_FOUND,
-            TxHistoryStreamingRequestError::CoinNotSupported => StatusCode::NOT_IMPLEMENTED,
+            TxHistoryStreamingRequestError::CoinNotSupported { .. } => StatusCode::NOT_IMPLEMENTED,
             TxHistoryStreamingRequestError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -67,7 +84,9 @@ pub async fn enable_tx_history(
             let streamer = ZCoinTxHistoryEventStreamer::new(coin.clone());
             ctx.event_stream_manager.add(client_id, streamer, coin.spawner()).await
         },
-        _ => Err(TxHistoryStreamingRequestError::CoinNotSupported)?,
+        _ => Err(TxHistoryStreamingRequestError::CoinNotSupported {
+            supported_coins: TX_HISTORY_STREAMING_SUPPORTED_COINS,
+        })?,
     };
 
     enable_result

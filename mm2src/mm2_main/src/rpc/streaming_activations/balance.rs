@@ -10,8 +10,11 @@ use common::HttpStatusCode;
 use http::StatusCode;
 use mm2_core::mm_ctx::MmArc;
 use mm2_err_handle::{map_to_mm::MapToMmResult, mm_error::MmResult};
+use std::fmt;
 
 use serde_json::Value as Json;
+
+const BALANCE_STREAMING_SUPPORTED_COINS: &[&str] = &["UtxoCoin", "Bch", "QtumCoin", "EthCoin", "ZCoin", "Tendermint"];
 
 #[derive(Deserialize)]
 pub struct EnableBalanceStreamingRequest {
@@ -19,13 +22,26 @@ pub struct EnableBalanceStreamingRequest {
     pub config: Option<Json>,
 }
 
-#[derive(Display, Serialize, SerializeErrorType)]
+#[derive(Serialize, SerializeErrorType)]
 #[serde(tag = "error_type", content = "error_data")]
 pub enum BalanceStreamingRequestError {
     EnableError(String),
     CoinNotFound,
-    CoinNotSupported,
+    CoinNotSupported { supported_coins: &'static [&'static str] },
     Internal(String),
+}
+
+impl fmt::Display for BalanceStreamingRequestError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            BalanceStreamingRequestError::EnableError(msg) => write!(f, "EnableError: {}", msg),
+            BalanceStreamingRequestError::CoinNotFound => write!(f, "CoinNotFound"),
+            BalanceStreamingRequestError::CoinNotSupported { supported_coins } => {
+                write!(f, "CoinNotSupported: {:?}", supported_coins)
+            },
+            BalanceStreamingRequestError::Internal(msg) => write!(f, "Internal: {}", msg),
+        }
+    }
 }
 
 impl HttpStatusCode for BalanceStreamingRequestError {
@@ -33,7 +49,7 @@ impl HttpStatusCode for BalanceStreamingRequestError {
         match self {
             BalanceStreamingRequestError::EnableError(_) => StatusCode::BAD_REQUEST,
             BalanceStreamingRequestError::CoinNotFound => StatusCode::NOT_FOUND,
-            BalanceStreamingRequestError::CoinNotSupported => StatusCode::NOT_IMPLEMENTED,
+            BalanceStreamingRequestError::CoinNotSupported { .. } => StatusCode::NOT_IMPLEMENTED,
             BalanceStreamingRequestError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -62,7 +78,9 @@ pub async fn enable_balance(
                 ))?
             }
         },
-        _ => Err(BalanceStreamingRequestError::CoinNotSupported)?,
+        _ => Err(BalanceStreamingRequestError::CoinNotSupported {
+            supported_coins: BALANCE_STREAMING_SUPPORTED_COINS,
+        })?,
     }
 
     let enable_result = match coin {
@@ -91,7 +109,9 @@ pub async fn enable_balance(
             let streamer = TendermintBalanceEventStreamer::new(coin.clone());
             ctx.event_stream_manager.add(client_id, streamer, coin.spawner()).await
         },
-        _ => Err(BalanceStreamingRequestError::CoinNotSupported)?,
+        _ => Err(BalanceStreamingRequestError::CoinNotSupported {
+            supported_coins: BALANCE_STREAMING_SUPPORTED_COINS,
+        })?,
     };
 
     enable_result

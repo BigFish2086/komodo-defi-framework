@@ -11,6 +11,8 @@ use http::StatusCode;
 /// The request used for any event streaming deactivation.
 #[derive(Deserialize)]
 pub struct DisableStreamingRequest {
+    // If the client ID isn't included, assume it's 0.
+    #[serde(default)]
     pub client_id: u64,
     pub streamer_id: String,
 }

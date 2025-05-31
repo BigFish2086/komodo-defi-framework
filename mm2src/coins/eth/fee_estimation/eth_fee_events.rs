@@ -15,7 +15,9 @@ use std::convert::TryFrom;
 /// Simple - simple internal gas price estimator based on historical data.
 /// Provider - gas price estimator using external provider (using gas api).
 pub enum EstimatorType {
+    #[serde(alias = "simple")]
     Simple,
+    #[serde(alias = "provider")]
     Provider,
 }
 

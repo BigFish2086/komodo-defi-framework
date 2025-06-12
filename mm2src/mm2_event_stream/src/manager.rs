@@ -331,6 +331,11 @@ impl StreamingManager {
             }
         }
     }
+
+    pub fn get_active_streamers_ids(&self) -> Result<Vec<String>, StreamingManagerError> {
+        let this = self.read();
+        Ok(this.streamers.keys().cloned().collect())
+    }
 }
 
 /// A handle that is returned on [`StreamingManager::new_client`] calls that will auto remove

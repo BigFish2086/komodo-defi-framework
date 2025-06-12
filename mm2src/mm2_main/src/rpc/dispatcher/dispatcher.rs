@@ -384,6 +384,7 @@ async fn rpc_streaming_dispatcher(
         "order_status::enable" => handle_mmrpc(ctx, request, streaming_activations::enable_order_status).await,
         "tx_history::enable" => handle_mmrpc(ctx, request, streaming_activations::enable_tx_history).await,
         "orderbook::enable" => handle_mmrpc(ctx, request, streaming_activations::enable_orderbook).await,
+        "list::ids" => handle_mmrpc(ctx, request, streaming_activations::list_active_streamers_ids).await,
         "disable" => handle_mmrpc(ctx, request, streaming_activations::disable_streamer).await,
         _ => MmError::err(DispatcherError::NoSuchMethod),
     }

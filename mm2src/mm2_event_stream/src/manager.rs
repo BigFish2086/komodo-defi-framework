@@ -332,7 +332,7 @@ impl StreamingManager {
         }
     }
 
-    pub fn get_active_streamers_ids(&self) -> Result<Vec<String>, StreamingManagerError> {
+    pub fn get_active_streamers_ids(&self) -> Result<Vec<StreamerId>, StreamingManagerError> {
         let this = self.read();
         Ok(this.streamers.keys().cloned().collect())
     }

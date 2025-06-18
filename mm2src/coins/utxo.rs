@@ -598,6 +598,8 @@ pub struct UtxoCoinConf {
     pub derivation_path: Option<HDPathToCoin>,
     /// The average time in seconds needed to mine a new block for this coin.
     pub avg_blocktime: Option<u64>,
+    /// Whether is it allowed to have tx_history or not
+    pub tx_history: bool,
 }
 
 pub struct UtxoCoinFields {

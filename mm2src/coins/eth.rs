@@ -865,6 +865,8 @@ pub struct EthCoinImpl {
     contract_supports_watchers: bool,
     web3_instances: AsyncMutex<Vec<Web3Instance>>,
     decimals: u8,
+    /// Whether is it allowed to have tx_history or not
+    pub tx_history: bool,
     history_sync_state: Mutex<HistorySyncState>,
     required_confirmations: AtomicU64,
     swap_txfee_policy: Mutex<SwapTxFeePolicy>,
@@ -6655,6 +6657,8 @@ pub async fn eth_coin_from_conf_and_request(
     let gas_limit: EthGasLimit = extract_gas_limit_from_conf(conf)?;
     let gas_limit_v2: EthGasLimitV2 = extract_gas_limit_from_conf(conf)?;
 
+    let tx_history = req["tx_history"].as_bool().unwrap_or_default();
+
     let coin = EthCoinImpl {
         priv_key_policy: key_pair,
         derivation_method: Arc::new(derivation_method),
@@ -6669,6 +6673,7 @@ pub async fn eth_coin_from_conf_and_request(
         decimals,
         ticker: ticker.into(),
         web3_instances: AsyncMutex::new(web3_instances),
+        tx_history,
         history_sync_state: Mutex::new(initial_history_state),
         swap_txfee_policy: Mutex::new(SwapTxFeePolicy::Internal),
         max_eth_tx_type,
@@ -7505,6 +7510,7 @@ impl EthCoin {
             contract_supports_watchers: self.contract_supports_watchers,
             web3_instances: AsyncMutex::new(self.web3_instances.lock().await.clone()),
             decimals: self.decimals,
+            tx_history: false,
             history_sync_state: Mutex::new(self.history_sync_state.lock().unwrap().clone()),
             required_confirmations: AtomicU64::new(
                 self.required_confirmations.load(std::sync::atomic::Ordering::SeqCst),

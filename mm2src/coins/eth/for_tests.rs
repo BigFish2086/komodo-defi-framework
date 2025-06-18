@@ -57,6 +57,7 @@ pub(crate) fn eth_coin_from_keypair(
         coin_type,
         chain_spec: ChainSpec::Evm { chain_id },
         decimals: 18,
+        tx_history: false,
         history_sync_state: Mutex::new(HistorySyncState::NotEnabled),
         sign_message_prefix: Some(String::from("Ethereum Signed Message:\n")),
         priv_key_policy: key_pair.into(),

@@ -10,8 +10,7 @@ use mm2_core::mm_ctx::MmArc;
 use mm2_err_handle::{map_to_mm::MapToMmResult, mm_error::MmResult};
 use std::fmt;
 
-const TX_HISTORY_STREAMING_SUPPORTED_COINS: &[&str] =
-    &["UtxoCoin", "Bch", "QtumCoin", "EthCoin", "ZCoin", "Tendermint"];
+const TX_HISTORY_STREAMING_SUPPORTED_COINS: &[&str] = &["UtxoCoin", "Bch", "QtumCoin", "ZCoin", "Tendermint"];
 
 #[derive(Deserialize)]
 pub struct EnableTxHistoryStreamingRequest {
@@ -61,6 +60,8 @@ pub async fn enable_tx_history(
         .map_err(TxHistoryStreamingRequestError::Internal)?
         .ok_or(TxHistoryStreamingRequestError::CoinNotFound)?;
 
+    let is_tx_history_enabled = coin.is_tx_history_enabled();
+
     let enable_result = match coin {
         MmCoinEnum::UtxoCoin(coin) => {
             let streamer = TxHistoryEventStreamer::new(req.coin);
@@ -88,6 +89,13 @@ pub async fn enable_tx_history(
             supported_coins: TX_HISTORY_STREAMING_SUPPORTED_COINS,
         })?,
     };
+
+    if !is_tx_history_enabled {
+        return Err(TxHistoryStreamingRequestError::EnableError(
+            "Can't enable balance for a coin since it wasn't activated using `tx_history: true`".to_string(),
+        )
+        .into());
+    }
 
     enable_result
         .map(EnableStreamingResponse::new)

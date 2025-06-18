@@ -3705,6 +3705,26 @@ impl MmCoinEnum {
 
     pub fn is_eth(&self) -> bool { matches!(self, MmCoinEnum::EthCoin(_)) }
 
+    pub fn is_tx_history_enabled(&self) -> bool {
+        match self {
+            MmCoinEnum::UtxoCoin(ref c) => c.as_ref().conf.tx_history,
+            MmCoinEnum::QtumCoin(ref c) => c.as_ref().conf.tx_history,
+            MmCoinEnum::Qrc20Coin(ref c) => c.as_ref().conf.tx_history,
+            MmCoinEnum::EthCoin(ref c) => c.tx_history,
+            MmCoinEnum::ZCoin(ref c) => c.as_ref().conf.tx_history,
+            MmCoinEnum::Bch(ref c) => c.as_ref().conf.tx_history,
+            MmCoinEnum::SlpToken(ref c) => c.as_ref().conf.tx_history,
+            MmCoinEnum::Tendermint(ref c) => c.tx_history,
+            MmCoinEnum::TendermintToken(ref c) => c.platform_coin.tx_history,
+            #[cfg(not(target_arch = "wasm32"))]
+            MmCoinEnum::LightningCoin(..) => false,
+            #[cfg(feature = "enable-sia")]
+            MmCoinEnum::SiaCoin(..) => false,
+            #[cfg(any(test, feature = "for-tests"))]
+            MmCoinEnum::Test(..) => false,
+        }
+    }
+
     fn is_platform_coin(&self) -> bool { self.ticker() == self.platform_ticker() }
 
     /// Determines the secret hash algorithm for a coin, prioritizing specific algorithms for certain protocols.

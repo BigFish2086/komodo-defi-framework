@@ -113,6 +113,7 @@ impl<'a> UtxoConfBuilder<'a> {
         let derivation_path = self.derivation_path()?;
         let avg_blocktime = self.avg_blocktime();
         let spv_conf = self.spv_conf()?;
+        let tx_history = self.params.tx_history;
 
         Ok(UtxoCoinConf {
             ticker: self.ticker.to_owned(),
@@ -145,6 +146,7 @@ impl<'a> UtxoConfBuilder<'a> {
             spv_conf,
             derivation_path,
             avg_blocktime,
+            tx_history,
         })
     }
 

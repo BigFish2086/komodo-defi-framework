@@ -409,6 +409,7 @@ pub struct TendermintCoinImpl {
     /// This spawner is used to spawn coin's related futures that should be aborted on coin deactivation
     /// or on [`MmArc::stop`].
     pub(super) abortable_system: AbortableQueue,
+    pub tx_history: bool,
     pub(crate) history_sync_state: Mutex<HistorySyncState>,
     client: TendermintRpcClient,
     pub ctx: MmWeak,
@@ -773,6 +774,7 @@ impl TendermintCoin {
             avg_blocktime: conf.avg_blocktime,
             tokens_info: PaMutex::new(HashMap::new()),
             abortable_system,
+            tx_history,
             history_sync_state: Mutex::new(history_sync_state),
             client: TendermintRpcClient(AsyncMutex::new(client_impl)),
             protocol_info,

@@ -372,7 +372,7 @@ where
 }
 
 pub fn address_from_str_unchecked(coin: &UtxoCoinFields, address: &str) -> MmResult<Address, AddrFromStrError> {
-    let mut errors = Vec::with_capacity(3);
+    let mut errors = Vec::with_capacity(4);
 
     match Address::from_legacyaddress(address, &coin.conf.address_prefixes) {
         Ok(legacy) => return Ok(legacy),
@@ -387,6 +387,11 @@ pub fn address_from_str_unchecked(coin: &UtxoCoinFields, address: &str) -> MmRes
     match Address::from_cashaddress(address, coin.conf.checksum_type, &coin.conf.address_prefixes) {
         Ok(cashaddress) => return Ok(cashaddress),
         Err(e) => errors.push(e),
+    }
+
+    match Address::from_tex_bech32m(address) {
+        Ok(t1) => return Ok(t1),
+        Err(e) => errors.push(e.to_string()),
     }
 
     MmError::err(AddrFromStrError::CannotDetermineFormat(errors))
@@ -3371,8 +3376,12 @@ where
     T: CoinWithDerivationMethod + HDWalletCoinOps<HDWallet = UtxoHDWallet> + HDCoinWithdrawOps + UtxoCommonOps,
 {
     match coin.derivation_method() {
-        DerivationMethod::SingleAddress(my_address) => get_withdraw_iguana_sender(coin, req, my_address),
+        DerivationMethod::SingleAddress(my_address) => {
+            log!("utxo_common: get_withdraw_from_address: derivation_method: SingleAddress");
+            get_withdraw_iguana_sender(coin, req, my_address)
+        }
         DerivationMethod::HDWallet(hd_wallet) => {
+            log!("utxo_common: get_withdraw_from_address: derivation_method: HDWallet");
             let from = req.from.clone().or_mm_err(|| WithdrawError::FromAddressNotFound)?;
             coin.get_withdraw_hd_sender(hd_wallet, &from)
                 .await

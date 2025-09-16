@@ -404,6 +404,68 @@ fn test_z_coin_tx_history() {
     assert_eq!(response.result.total_pages, 2);
 }
 
+pub fn zec_conf() -> Json {
+    json!({
+        "coin": "ZEC",
+        "name":"zcash",
+        "fname": "Zcash",
+        "sign_message_prefix": "Zcash Signed Message:\n",
+        "rpcport": 8232,
+        "taddr": 28,
+        "pubtype": 184,
+        "p2shtype": 189,
+        "wiftype": 128,
+        "segwit": false,
+        "txversion": 4,
+        "overwintered": 1,
+        "version_group_id": "0x892f2085",
+        "consensus_branch_id": "0xc8e71055",
+        "txfee": 100000,
+        "mm2": 1,
+        "bech32_hrp": "tex",
+        "required_confirmations": 3,
+        "avg_blocktime": 75,
+        "protocol": {
+            "type": "UTXO"
+        },
+        "derivation_path": "m/44'/133'",
+        "trezor_coin": "Zcash",
+        "links": {
+            "github": "https://github.com/zcash/zcash",
+            "homepage": "https://z.cash"
+        }
+    })
+}
+
+#[test]
+fn withdraw_zec() {
+    let seed = "spice describe gravity federal blast come thank unfair canal monkey style afraid";
+    let coins = json!([zec_conf()]);
+
+    let conf = Mm2TestConf::seednode(seed, &coins);
+    let mm_alice = MarketMakerIt::start(conf.conf, conf.rpc_password, None).unwrap();
+    log!("Alice log path: {}", mm_alice.log_path.display());
+
+    const ZEC_ELECTRUMS: &[&str] = &["electrum3.cipig.net:10068", "testnet.aranguren.org:51001"];
+    let electrum = block_on(enable_electrum(&mm_alice, "ZEC", false, ZEC_ELECTRUMS));
+    log!("enable_coins (alice): {:?}", electrum);
+
+    let withdraw = block_on(mm_alice.rpc(&json!({
+        "userpass": mm_alice.userpass,
+        "method": "withdraw",
+        "coin": "ZEC",
+        "to": "tex1s2rt77ggv6q989lr49rkgzmh5slsksa9khdgte",
+        "amount": 0.00001,
+    })))
+    .unwrap();
+    log!("withdraw (alice): {:?}", withdraw);
+    assert!(withdraw.0.is_success(), "ZEC withdraw: {}", withdraw.1);
+
+    // let _: TransactionDetails = json::from_str(&withdraw.1).expect("Expected 'TransactionDetails'");
+
+    todo!("FINISH: withdraw_zec_light ");
+}
+
 // ignored because it requires a long-running Zcoin initialization process
 #[test]
 #[ignore]

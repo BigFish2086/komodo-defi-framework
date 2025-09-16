@@ -161,6 +161,7 @@ where
         let decimals = coin.as_ref().decimals;
         let req = self.request();
 
+        log!("UtxoWithdraw: build: req/to: {}", req.to);
         let to = coin.address_from_str(&req.to).map_mm_err()?;
 
         // Generate unsigned transaction.
@@ -429,6 +430,7 @@ impl<Coin> InitUtxoWithdraw<Coin> {
             None => DerivationPath::default(),
         };
 
+        log!("InitUtxoWithdraw from_address: {:#?}", from_address_string);
         Ok(InitUtxoWithdraw {
             ctx,
             coin,
@@ -512,6 +514,7 @@ where
             None => *coin.as_ref().priv_key_policy.activated_key_or_err().map_mm_err()?,
         };
 
+        log!("StandardUtxoWithdraw from_address: {:#?}", from_address_string);
         Ok(StandardUtxoWithdraw {
             coin,
             req,

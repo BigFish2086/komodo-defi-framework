@@ -315,6 +315,54 @@ impl Address {
             None => Err("hrp must be provided for segwit address".into()),
         }
     }
+
+    pub fn from_tex_bech32m(address: &str) -> Result<Address, String> {
+        use bech32;
+        use H160;
+        use std::convert::TryInto;
+
+        let (hrp, payload, variant) = bech32::decode(address).map_err(|e| e.to_string())?;
+        if hrp != "tex" {
+            return Err(format!("t1_from_tex: Invalid address prefix, expected: tex, but got {}", hrp));
+        }
+        if payload.is_empty() {
+            return Err("t1_from_tex: Empty Bech32m payload".to_string());
+        } 
+        if variant != bech32::Variant::Bech32m {
+            return Err(format!("t1_from_tex: Invalid Bech32 variant, expected: Bech32m, but got {:?}", variant));
+        }
+
+        // TODO: other checks regarding version and pkh
+        let _version = payload[0];
+        let pkh = match bech32::FromBase32::from_base32(&payload) {
+            Ok::<Vec<u8>, _>(p) => p,
+            Err(e) => return Err(format!("t1_from_tex: {}", e)),
+        };
+        let pkh_arr: [u8; 20] = pkh.try_into().map_err(|_| "PKH must be exactly 20 bytes".to_string())?;
+
+        // use bs58;
+        // use sha2::{Digest, Sha256};
+        // let mut data = vec![0x1C, 0xB8];
+        // data.extend(pkh);
+        // let checksum = {
+        //     let hash1 = Sha256::digest(&data);
+        //     let hash2 = Sha256::digest(&hash1);
+        //     hash2[..4].to_vec()
+        // };
+        // data.extend(checksum);
+        // let t1 = bs58::encode(data).into_string();
+        // log!("t1: {:?}", t1);
+
+        Ok(Address {
+            prefix: AddressPrefix::from(*b"t1"),
+            hash: AddressHashEnum::AddressHash(H160::from(pkh_arr)),
+            checksum_type: ChecksumType::DSHA256,
+            hrp: Some("tex".to_string()),
+            pubkey: None,
+            addr_format: AddressFormat::Standard,
+            script_type: AddressScriptType::P2PKH,
+        })
+    }
 }
 
 impl fmt::Display for Address {
